@@ -44,6 +44,7 @@ import {
   pauseAllQueues,
   processTransactionVersion2,
   registerName,
+  updateName,
   removeAdmin,
   resumeAllQueues,
   saveTempPublish,
@@ -68,6 +69,7 @@ import { encryptSingle } from '../qdn/encryption/group-encryption';
 import { _createPoll, _voteOnPoll } from '../qortal/get.ts';
 import { createTransaction } from '../transactions/transactions';
 import { getData, storeData } from '../utils/chromeStorage';
+import { getWalletErrorMessage } from '../utils/walletErrorMessages.ts';
 
 export function versionCase(request, event) {
   event.source.postMessage(
@@ -259,7 +261,7 @@ export async function decryptWalletCase(request, event) {
       {
         requestId: request.requestId,
         action: 'decryptWallet',
-        error: error?.message,
+        error: getWalletErrorMessage(error),
         type: 'backgroundMessageResponse',
       },
       event.origin
@@ -801,6 +803,32 @@ export async function registerNameCase(request, event) {
       {
         requestId: request.requestId,
         action: 'registerName',
+        error: error?.message,
+        type: 'backgroundMessageResponse',
+      },
+      event.origin
+    );
+  }
+}
+export async function updateNameCase(request, event) {
+  try {
+    const { newName, oldName, description } = request.payload;
+    const response = await updateName({ newName, oldName, description });
+
+    event.source.postMessage(
+      {
+        requestId: request.requestId,
+        action: 'updateName',
+        payload: response,
+        type: 'backgroundMessageResponse',
+      },
+      event.origin
+    );
+  } catch (error) {
+    event.source.postMessage(
+      {
+        requestId: request.requestId,
+        action: 'updateName',
         error: error?.message,
         type: 'backgroundMessageResponse',
       },

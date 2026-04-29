@@ -1,5 +1,6 @@
 export { AuthenticatedShell } from './AuthenticatedShell';
 export { SendQortOverlay } from './SendQortOverlay';
+export { ReceiveQortOverlay } from './ReceiveQortOverlay';
 export { SuccessOverlay } from './SuccessOverlay';
 export { SuccessScreen } from './SuccessScreen';
 export { WalletsView } from './WalletsView';
@@ -15,4 +16,5 @@ export { PaymentPublishDialog } from './PaymentPublishDialog';
 export { InfoDialog } from './InfoDialog';
 export { UnsavedChangesDialog } from './UnsavedChangesDialog';
 export { QortalRequestExtensionDialog } from './QortalRequestExtensionDialog';
+export { NotificationPermissionSlideDown } from './NotificationPermissionSlideDown';
 export type { MessageQortalRequestExtension } from './QortalRequestExtensionDialog';

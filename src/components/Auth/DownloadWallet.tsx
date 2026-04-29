@@ -17,11 +17,12 @@ import { useState } from 'react';
 import { decryptStoredWallet } from '../../utils/decryptWallet';
 import PhraseWallet from '../../utils/generateWallet/phrase-wallet';
 import { crypto, walletVersion } from '../../constants/decryptWallet';
+import { executeEvent } from '../../utils/events';
+import { getWalletErrorMessage } from '../../utils/walletErrorMessages';
 
 export const DownloadWallet = ({
   returnToMain,
   setIsLoading,
-  showInfo,
   rawWallet,
   setWalletToBeDownloaded,
   walletToBeDownloaded,
@@ -29,6 +30,9 @@ export const DownloadWallet = ({
   const [walletToBeDownloadedPassword, setWalletToBeDownloadedPassword] =
     useState<string>('');
   const [newPassword, setNewPassword] = useState<string>('');
+  const [isCurrentPasswordEditable, setIsCurrentPasswordEditable] =
+    useState(false);
+  const [isNewPasswordEditable, setIsNewPasswordEditable] = useState(false);
   const [keepCurrentPassword, setKeepCurrentPassword] = useState<boolean>(true);
   const theme = useTheme();
   const [walletToBeDownloadedError, setWalletToBeDownloadedError] =
@@ -43,7 +47,9 @@ export const DownloadWallet = ({
         walletToBeDownloaded.qortAddress
       );
     } catch (error: any) {
-      setWalletToBeDownloadedError(error?.message);
+      setWalletToBeDownloadedError(
+        getWalletErrorMessage(error, 'Unable to save this wallet backup.')
+      );
     }
   };
 
@@ -101,7 +107,9 @@ export const DownloadWallet = ({
         newPasswordForWallet
       );
     } catch (error: any) {
-      setWalletToBeDownloadedError(error?.message);
+      setWalletToBeDownloadedError(
+        getWalletErrorMessage(error, 'Unable to prepare this wallet backup.')
+      );
     } finally {
       setIsLoading(false);
     }
@@ -181,6 +189,24 @@ export const DownloadWallet = ({
             id="standard-adornment-password"
             value={walletToBeDownloadedPassword}
             onChange={(e) => setWalletToBeDownloadedPassword(e.target.value)}
+            autoComplete="new-password"
+            name="download-wallet-current-confirmation"
+            onFocus={() => setIsCurrentPasswordEditable(true)}
+            onMouseDown={() => setIsCurrentPasswordEditable(true)}
+            onBlur={() => {
+              if (!walletToBeDownloadedPassword) {
+                setIsCurrentPasswordEditable(false);
+              }
+            }}
+            InputProps={{
+              readOnly: !isCurrentPasswordEditable,
+            }}
+            inputProps={{
+              autoComplete: 'new-password',
+              'data-1p-ignore': 'true',
+              'data-lpignore': 'true',
+              spellCheck: 'false',
+            }}
           />
 
           <Spacer height="20px" />
@@ -233,6 +259,24 @@ export const DownloadWallet = ({
                 id="standard-adornment-password"
                 value={newPassword}
                 onChange={(e) => setNewPassword(e.target.value)}
+                autoComplete="new-password"
+                name="download-wallet-new-passphrase"
+                onFocus={() => setIsNewPasswordEditable(true)}
+                onMouseDown={() => setIsNewPasswordEditable(true)}
+                onBlur={() => {
+                  if (!newPassword) {
+                    setIsNewPasswordEditable(false);
+                  }
+                }}
+                InputProps={{
+                  readOnly: !isNewPasswordEditable,
+                }}
+                inputProps={{
+                  autoComplete: 'new-password',
+                  'data-1p-ignore': 'true',
+                  'data-lpignore': 'true',
+                  spellCheck: 'false',
+                }}
               />
 
               <Spacer height="20px" />
@@ -254,10 +298,12 @@ export const DownloadWallet = ({
           <CustomButton
             onClick={async () => {
               await saveFileToDiskFunc();
-              await showInfo({
+              executeEvent('openGlobalSnackBar', {
                 message: t('auth:message.generic.keep_secure', {
                   postProcess: 'capitalizeFirstChar',
                 }),
+                type: 'info',
+                duration: 5600,
               });
             }}
           >

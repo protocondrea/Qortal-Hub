@@ -11,12 +11,12 @@ import {
 import { AppsParent } from './Apps-styles';
 import AppViewerContainer from './AppViewerContainer';
 import ShortUniqueId from 'short-unique-id';
-import { Box, useTheme } from '@mui/material';
+import { Box } from '@mui/material';
 import { useTranslation } from 'react-i18next';
-import { appHeighOffsetPx } from '../Desktop/CustomTitleBar';
-import { APPS_BOTTOM_NAV_HEIGHT_PX } from './Apps-styles';
+import { appChromeOffsetPx } from '../Desktop/CustomTitleBar';
 
 const uid = new ShortUniqueId({ length: 8 });
+const DEV_MODE_SIDEBAR_SAFE_INSET_PX = 88;
 
 export const AppsDevMode = ({
   mode,
@@ -44,7 +44,6 @@ export const AppsDevMode = ({
   const [isNewTabWindow, setIsNewTabWindow] = useState(false);
   const [categories, setCategories] = useState([]);
   const iframeRefs = useRef({});
-  const theme = useTheme();
   const { t } = useTranslation([
     'auth',
     'core',
@@ -227,11 +226,14 @@ export const AppsDevMode = ({
       {mode === 'home' && (
         <Box
           sx={{
+            boxSizing: 'border-box',
             display: 'flex',
             flexDirection: 'column',
-            height: `calc(100vh - ${appHeighOffsetPx} )`,
+            height: `calc(100vh - ${appChromeOffsetPx} )`,
             overflow: 'auto',
-            width: 'auto',
+            pl: `${DEV_MODE_SIDEBAR_SAFE_INSET_PX}px`,
+            pr: '24px',
+            width: '100%',
           }}
         >
           <Spacer height="30px" />
@@ -265,13 +267,13 @@ export const AppsDevMode = ({
       {isNewTabWindow && mode === 'viewer' && (
         <>
           <Box
-            sx={{
-              display: 'flex',
-              flexDirection: 'column',
-              height: `calc(100vh - ${appHeighOffsetPx} )`,
-              overflow: 'auto',
-              width: 'auto',
-            }}
+          sx={{
+            display: 'flex',
+            flexDirection: 'column',
+            height: `calc(100vh - ${appChromeOffsetPx} )`,
+            overflow: 'auto',
+            width: 'auto',
+          }}
           >
             <Spacer height="30px" />
 

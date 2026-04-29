@@ -1,23 +1,21 @@
 import {
   Box,
-  Button,
+  ButtonBase,
   Checkbox,
-  Dialog,
-  DialogActions,
-  DialogContent,
   FormControlLabel,
   Typography,
 } from '@mui/material';
 import { useTheme } from '@mui/material/styles';
-import { Trans, useTranslation } from 'react-i18next';
-import { RefObject } from 'react';
-import { Return } from '../../assets/Icons/Return.tsx';
-import Logo1Dark from '../../assets/svgs/Logo1Dark.svg';
-import { Spacer } from '../../common/Spacer';
-import { CustomButton, CustomLabel, TextP } from '../../styles/App-styles.ts';
-import { ErrorText, PasswordField } from '../index';
-import { SuccessIcon } from '../../assets/Icons/SuccessIcon.tsx';
-import WarningIcon from '@mui/icons-material/Warning';
+import { RefObject, useEffect, useState } from 'react';
+import CheckCircleRoundedIcon from '@mui/icons-material/CheckCircleRounded';
+import ArrowBackRoundedIcon from '@mui/icons-material/ArrowBackRounded';
+import WarningAmberRoundedIcon from '@mui/icons-material/WarningAmberRounded';
+import { PasswordField, ErrorText } from '../index';
+import {
+  AuthButton,
+  AuthScreen,
+  AuthSectionLabel,
+} from '../Auth/AuthShell';
 
 type CreateWalletViewProps = {
   creationStep: number;
@@ -37,7 +35,8 @@ type CreateWalletViewProps = {
   setWalletToBeDownloadedPasswordConfirm: (v: string) => void;
   setStoredAccount: (v: boolean) => void;
   onCreateAccount: () => void;
-  onBackupAccountConfirm: () => void;
+  onBackupAccountConfirm: () => Promise<boolean>;
+  onEnterHub: () => void;
   exportSeedphrase: () => void;
 };
 
@@ -47,306 +46,336 @@ export function CreateWalletView({
   walletToBeDownloadedPassword,
   walletToBeDownloadedPasswordConfirm,
   walletToBeDownloadedError,
-  showSeed,
   storeAccount,
   generatorRef,
   confirmRef,
   onReturnBack,
-  onShowSeed,
-  onHideSeed,
   onCreationStepNext,
   setWalletToBeDownloadedPassword,
   setWalletToBeDownloadedPasswordConfirm,
   setStoredAccount,
   onCreateAccount,
   onBackupAccountConfirm,
+  onEnterHub,
   exportSeedphrase,
 }: CreateWalletViewProps) {
   const theme = useTheme();
-  const { t } = useTranslation(['auth', 'core']);
+  const [backupDownloaded, setBackupDownloaded] = useState(false);
+  const [seedphraseCopied, setSeedphraseCopied] = useState(false);
+  const [seedphraseRevealed, setSeedphraseRevealed] = useState(false);
+  const [passwordStepError, setPasswordStepError] = useState('');
+  const generatedSeedphrase = generatorRef.current?.parsedString || '';
+  const successAccent = backupDownloaded
+    ? {
+        border: 'rgba(126,171,255,0.36)',
+        icon: 'rgb(126,171,255)',
+        surface: 'rgba(64,111,213,0.1)',
+      }
+    : {
+        border: 'rgba(88,199,113,0.34)',
+        icon: 'rgb(88,199,113)',
+        surface: 'rgba(88,199,113,0)',
+      };
+
+  const passwordsMatch =
+    walletToBeDownloadedPassword &&
+    walletToBeDownloadedPasswordConfirm &&
+    walletToBeDownloadedPassword === walletToBeDownloadedPasswordConfirm;
+
+  const handleNextFromPassword = () => {
+    if (!walletToBeDownloadedPassword) {
+      setPasswordStepError('Enter a wallet password.');
+      return;
+    }
+
+    if (!walletToBeDownloadedPasswordConfirm) {
+      setPasswordStepError('Confirm your wallet password.');
+      return;
+    }
+
+    if (!passwordsMatch) {
+      setPasswordStepError('Passwords do not match.');
+      return;
+    }
+
+    setPasswordStepError('');
+    onCreationStepNext();
+  };
+
+  const handleCopyPhrase = async () => {
+    if (!seedphraseRevealed) {
+      setSeedphraseRevealed(true);
+      return;
+    }
+
+    if (!generatedSeedphrase) return;
+    try {
+      await navigator.clipboard.writeText(generatedSeedphrase);
+      setSeedphraseCopied(true);
+      window.setTimeout(() => setSeedphraseCopied(false), 1600);
+    } catch (error) {
+      console.error(error);
+    }
+  };
+
+  useEffect(() => {
+    setBackupDownloaded(false);
+  }, [walletToBeDownloaded?.qortAddress]);
+
+  const handleDownloadBackup = async () => {
+    const saved = await onBackupAccountConfirm();
+    if (saved) {
+      setBackupDownloaded(true);
+    }
+  };
+
+  if (walletToBeDownloaded) {
+    return (
+      <AuthScreen maxWidth={400}>
+        <Box
+          sx={{
+            alignItems: 'center',
+            display: 'flex',
+            flexDirection: 'column',
+            gap: 2.2,
+            textAlign: 'center',
+          }}
+        >
+          <Box
+            sx={{
+              alignItems: 'center',
+              backgroundColor: successAccent.surface,
+              border: `1px solid ${successAccent.border}`,
+              borderRadius: '999px',
+              display: 'inline-flex',
+              height: 84,
+              justifyContent: 'center',
+              transition:
+                'background-color 360ms ease, border-color 360ms ease, box-shadow 360ms ease',
+              width: 84,
+            }}
+          >
+            <CheckCircleRoundedIcon
+              sx={{
+                color: successAccent.icon,
+                fontSize: 54,
+                transition: 'color 360ms ease',
+              }}
+            />
+          </Box>
+
+          <Box>
+            <Typography
+              sx={{
+                fontSize: '1.56rem',
+                fontWeight: 700,
+                letterSpacing: '-0.03em',
+              }}
+            >
+              {backupDownloaded ? 'Wallet saved' : 'Account created'}
+            </Typography>
+            <Typography
+              sx={{
+                color: 'rgba(214,221,233,0.58)',
+                fontSize: '0.92rem',
+                lineHeight: 1.6,
+                mt: 0.9,
+              }}
+            >
+              {backupDownloaded
+                ? "You're now ready to enter Hub."
+                : 'Back up your encrypted wallet before entering Hub.'}
+            </Typography>
+          </Box>
+
+          <Box sx={{ display: 'flex', flexDirection: 'column', gap: 0.9, width: '100%' }}>
+            {backupDownloaded ? (
+              <>
+                <AuthButton onClick={onEnterHub}>Enter Hub</AuthButton>
+                <AuthButton onClick={handleDownloadBackup} primary={false}>
+                  Download another copy
+                </AuthButton>
+              </>
+            ) : (
+              <>
+                <AuthButton onClick={handleDownloadBackup}>
+                  Backup wallet
+                </AuthButton>
+                <AuthButton disabled primary={false}>
+                  Enter Hub
+                </AuthButton>
+              </>
+            )}
+          </Box>
+
+          <Typography
+            sx={{
+              color: 'rgba(214,221,233,0.5)',
+              fontSize: '0.78rem',
+              lineHeight: 1.5,
+            }}
+          >
+            This backup is encrypted with your wallet password.
+          </Typography>
+        </Box>
+      </AuthScreen>
+    );
+  }
+
+  if (creationStep === 2) {
+    return (
+      <AuthScreen
+        maxWidth={460}
+        title="Your Seedphrase"
+        subtitle="This can recover your account. Your encrypted wallet backup comes next."
+      >
+        <Box sx={{ display: 'flex', justifyContent: 'flex-start', alignItems: 'center' }}>
+          <ButtonBase
+            onClick={onReturnBack}
+            sx={{
+              color: 'rgba(214,221,233,0.62)',
+              minWidth: 0,
+              p: 0,
+              '&:hover': { color: theme.palette.text.primary },
+            }}
+          >
+              <ArrowBackRoundedIcon sx={{ fontSize: 18 }} />
+          </ButtonBase>
+        </Box>
+
+        <Box
+          sx={{
+            backgroundColor: 'rgba(255,255,255,0.03)',
+            border: '1px solid rgba(255,255,255,0.08)',
+            borderRadius: '8px',
+            px: 2,
+            py: 1.8,
+            textAlign: 'center',
+          }}
+        >
+          <Typography
+            sx={{
+              fontSize: '0.98rem',
+              fontWeight: 600,
+              minHeight: '3.7em',
+              lineHeight: 1.85,
+              wordBreak: 'break-word',
+            }}
+          >
+            {seedphraseRevealed ? generatedSeedphrase : ''}
+          </Typography>
+        </Box>
+
+        <Box sx={{ display: 'grid', gap: 0.9, gridTemplateColumns: '1fr 1fr' }}>
+          <AuthButton onClick={handleCopyPhrase} primary={false}>
+            {!seedphraseRevealed ? 'Reveal' : seedphraseCopied ? 'Copied' : 'Copy'}
+          </AuthButton>
+          <AuthButton onClick={exportSeedphrase} primary={false}>
+            Export
+          </AuthButton>
+        </Box>
+
+        <Box
+          sx={{
+            alignItems: 'flex-start',
+            backgroundColor: 'rgba(217,165,58,0.08)',
+            border: '1px solid rgba(217,165,58,0.16)',
+            borderRadius: '8px',
+            color: 'rgba(239,228,202,0.92)',
+            display: 'flex',
+            gap: 1,
+            px: 1.2,
+            py: 1,
+          }}
+        >
+          <WarningAmberRoundedIcon sx={{ color: '#E2B454', fontSize: 20, mt: 0.15 }} />
+          <Typography sx={{ fontSize: '0.86rem', lineHeight: 1.55 }}>
+            Never share this. Anyone with it can access your account. For daily
+            safekeeping, use the encrypted wallet backup after creation.
+          </Typography>
+        </Box>
+
+        <AuthButton onClick={onCreateAccount}>
+          Create account
+        </AuthButton>
+      </AuthScreen>
+    );
+  }
 
   return (
-    <>
-      {!walletToBeDownloaded && (
-        <>
-          <Spacer height="22px" />
-          <Box
+    <AuthScreen
+      maxWidth={400}
+      title="Create password"
+      subtitle="This password protects your account on this device."
+    >
+      <Box sx={{ display: 'flex', justifyContent: 'flex-start', alignItems: 'center' }}>
+        <ButtonBase
+          onClick={onReturnBack}
+          sx={{
+            color: 'rgba(214,221,233,0.62)',
+            minWidth: 0,
+            p: 0,
+            '&:hover': { color: theme.palette.text.primary },
+          }}
+        >
+          <ArrowBackRoundedIcon sx={{ fontSize: 18 }} />
+        </ButtonBase>
+      </Box>
+
+      <Box>
+        <AuthSectionLabel>Wallet password</AuthSectionLabel>
+        <PasswordField
+          value={walletToBeDownloadedPassword}
+          onChange={(e) => setWalletToBeDownloadedPassword(e.target.value)}
+          name="create-wallet-password"
+          suppressAutofill
+          sx={{ width: '100%' }}
+          onKeyDown={(e) => {
+            if (e.key === 'Enter') confirmRef.current?.focus();
+          }}
+        />
+      </Box>
+
+      <Box>
+        <AuthSectionLabel>Confirm password</AuthSectionLabel>
+        <PasswordField
+          inputRef={confirmRef}
+          value={walletToBeDownloadedPasswordConfirm}
+          onChange={(e) => setWalletToBeDownloadedPasswordConfirm(e.target.value)}
+          name="create-wallet-password-confirmation"
+          suppressAutofill
+          sx={{ width: '100%' }}
+          onKeyDown={(e) => {
+            if (e.key === 'Enter') handleNextFromPassword();
+          }}
+        />
+      </Box>
+
+      <FormControlLabel
+        sx={{ alignItems: 'center', m: 0 }}
+        control={
+          <Checkbox
+            checked={storeAccount}
+            onChange={(event) => setStoredAccount(event.target.checked)}
+            sx={{ color: theme.palette.text.secondary }}
+          />
+        }
+        label={
+          <Typography
             sx={{
-              boxSizing: 'border-box',
-              display: 'flex',
-              justifyContent: 'flex-start',
-              maxWidth: '700px',
-              paddingLeft: '22px',
-              width: '100%',
+              color: 'rgba(214,221,233,0.62)',
+              fontSize: '0.86rem',
+              lineHeight: 1.55,
             }}
           >
-            <Return
-              style={{ cursor: 'pointer', height: '24px', width: 'auto' }}
-              onClick={onReturnBack}
-            />
-          </Box>
-          <Spacer height="15px" />
-          <div
-            className="image-container"
-            style={{ width: '136px', height: '154px' }}
-          >
-            <img src={Logo1Dark} className="base-image" alt="Qortal" />
-          </div>
-          <Spacer height="38px" />
-          <TextP
-            sx={{
-              textAlign: 'center',
-              lineHeight: 1.2,
-              fontSize: '18px',
-            }}
-          >
-            {t('auth:action.setup_qortal_account', {
-              postProcess: 'capitalizeFirstChar',
-            })}
-          </TextP>
-          <Spacer height="14px" />
-          <Box
-            sx={{
-              display: 'flex',
-              maxWidth: '100%',
-              justifyContent: 'center',
-              padding: '10px',
-            }}
-          >
-            <Box
-              sx={{
-                alignItems: 'center',
-                display: creationStep === 1 ? 'flex' : 'none',
-                flexDirection: 'column',
-                maxWidth: '95%',
-                width: '350px',
-              }}
-            >
-              <Typography sx={{ fontSize: '14px' }}>
-                <Trans
-                  ns="auth"
-                  i18nKey="message.generic.seedphrase_notice"
-                  components={{
-                    seed: (
-                      <span
-                        onClick={onShowSeed}
-                        style={{
-                          fontSize: '14px',
-                          color: 'steelblue',
-                          cursor: 'pointer',
-                        }}
-                      />
-                    ),
-                  }}
-                  tOptions={{ postProcess: ['capitalizeFirstChar'] }}
-                />
-              </Typography>
-              <Typography sx={{ fontSize: '14px', marginTop: '5px' }}>
-                {t('auth:tips.view_seedphrase', {
-                  postProcess: 'capitalizeFirstChar',
-                })}
-              </Typography>
-              <Typography
-                sx={{ fontSize: '18px', marginTop: '15px', textAlign: 'center' }}
-              >
-                <Trans
-                  i18nKey="action.create_qortal_account"
-                  ns="auth"
-                  components={{
-                    next: <span style={{ fontWeight: 'bold' }} />,
-                  }}
-                  tOptions={{ postProcess: ['capitalizeFirstChar'] }}
-                />
-              </Typography>
-              <Spacer height="17px" />
-              <CustomButton onClick={onCreationStepNext}>
-                {t('core:pagination.next', {
-                  postProcess: 'capitalizeFirstChar',
-                })}
-              </CustomButton>
-            </Box>
-            <div style={{ display: 'none' }}>
-              {/* @ts-expect-error custom element from randomSentenceGenerator */}
-              <random-sentence-generator
-                ref={generatorRef}
-                template="adverb verb noun adjective noun adverb verb noun adjective noun adjective verbed adjective noun"
-              />
-            </div>
-            <Dialog
-              open={showSeed}
-              aria-labelledby="alert-dialog-title"
-              aria-describedby="alert-dialog-description"
-            >
-              <DialogContent>
-                <Box
-                  sx={{
-                    alignItems: 'center',
-                    display: showSeed ? 'flex' : 'none',
-                    flexDirection: 'column',
-                    gap: '10px',
-                    maxWidth: '400px',
-                  }}
-                >
-                  <Typography sx={{ fontSize: '14px' }}>
-                    {t('auth:seed_your', {
-                      postProcess: 'capitalizeFirstChar',
-                    })}
-                  </Typography>
-                  <Box
-                    sx={{
-                      background: theme.palette.background.paper,
-                      borderRadius: '8px',
-                      padding: '10px',
-                      textAlign: 'center',
-                      width: '100%',
-                    }}
-                  >
-                    {generatorRef.current?.parsedString}
-                  </Box>
-                  <CustomButton
-                    sx={{ padding: '7px', fontSize: '12px' }}
-                    onClick={exportSeedphrase}
-                  >
-                    {t('auth:action.export_seedphrase', {
-                      postProcess: 'capitalizeFirstChar',
-                    })}
-                  </CustomButton>
-                </Box>
-              </DialogContent>
-              <DialogActions>
-                <Button variant="contained" onClick={onHideSeed}>
-                  {t('core:action.close', {
-                    postProcess: 'capitalizeFirstChar',
-                  })}
-                </Button>
-              </DialogActions>
-            </Dialog>
-          </Box>
-          <Box
-            sx={{
-              display: creationStep === 2 ? 'flex' : 'none',
-              flexDirection: 'column',
-              alignItems: 'center',
-            }}
-          >
-            <Spacer height="14px" />
-            <CustomLabel htmlFor="standard-adornment-password">
-              {t('auth:wallet.password', {
-                postProcess: 'capitalizeFirstChar',
-              })}
-            </CustomLabel>
-            <Spacer height="5px" />
-            <PasswordField
-              id="standard-adornment-password"
-              value={walletToBeDownloadedPassword}
-              onChange={(e) => setWalletToBeDownloadedPassword(e.target.value)}
-              onKeyDown={(e) => {
-                if (e.key === 'Enter') confirmRef.current?.focus();
-              }}
-            />
-            <Spacer height="5px" />
-            <CustomLabel htmlFor="standard-adornment-password-confirm">
-              {t('auth:wallet.password_confirmation', {
-                postProcess: 'capitalizeFirstChar',
-              })}
-            </CustomLabel>
-            <Spacer height="5px" />
-            <PasswordField
-              inputRef={confirmRef}
-              id="standard-adornment-password-confirm"
-              value={walletToBeDownloadedPasswordConfirm}
-              onChange={(e) =>
-                setWalletToBeDownloadedPasswordConfirm(e.target.value)
-              }
-              onKeyDown={(e) => {
-                if (e.key === 'Enter') onCreateAccount();
-              }}
-            />
-            <Spacer height="5px" />
-            <Typography variant="body2">
-              {t('auth:message.generic.no_minimum_length', {
-                postProcess: 'capitalizeFirstChar',
-              })}
-            </Typography>
-            <Spacer height="5px" />
-            <FormControlLabel
-              sx={{ margin: 0 }}
-              control={
-                <Checkbox
-                  onChange={(e) => setStoredAccount(e.target.checked)}
-                  checked={storeAccount}
-                  edge="start"
-                  tabIndex={-1}
-                  disableRipple
-                  sx={{
-                    '&.Mui-checked': {
-                      color: theme.palette.text.secondary,
-                    },
-                    '& .MuiSvgIcon-root': {
-                      color: theme.palette.text.secondary,
-                    },
-                  }}
-                />
-              }
-              label={
-                <Box sx={{ display: 'flex', alignItems: 'center' }}>
-                  <Typography sx={{ fontSize: '14px' }}>
-                    {t('auth:store_account', {
-                      postProcess: 'capitalizeFirstChar',
-                    })}
-                  </Typography>
-                </Box>
-              }
-            />
-            <Spacer height="17px" />
-            <CustomButton onClick={onCreateAccount}>
-              {t('auth:action.create_account', {
-                postProcess: 'capitalizeFirstChar',
-              })}
-            </CustomButton>
-          </Box>
-          <ErrorText>{walletToBeDownloadedError}</ErrorText>
-        </>
-      )}
-      {walletToBeDownloaded && (
-        <>
-          <Spacer height="48px" />
-          <SuccessIcon />
-          <Spacer height="45px" />
-          <TextP
-            sx={{
-              textAlign: 'center',
-              lineHeight: '15px',
-            }}
-          >
-            {t('auth:message.generic.congrats_setup', {
-              postProcess: 'capitalizeFirstChar',
-            })}
-          </TextP>
-          <Spacer height="50px" />
-          <Box
-            sx={{
-              display: 'flex',
-              gap: '15px',
-              alignItems: 'center',
-              padding: '10px',
-            }}
-          >
-            <WarningIcon color="warning" />
-            <Typography>
-              {t('auth:tips.safe_place', {
-                postProcess: 'capitalizeFirstChar',
-              })}
-            </Typography>
-          </Box>
-          <Spacer height="50px" />
-          <CustomButton onClick={onBackupAccountConfirm}>
-            {t('core:action.backup_account', {
-              postProcess: 'capitalizeFirstChar',
-            })}
-          </CustomButton>
-        </>
-      )}
-    </>
+            Save account in Hub
+          </Typography>
+        }
+      />
+
+      <ErrorText>{passwordStepError || walletToBeDownloadedError}</ErrorText>
+
+      <AuthButton onClick={handleNextFromPassword}>Continue</AuthButton>
+    </AuthScreen>
   );
 }

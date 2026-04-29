@@ -1,7 +1,6 @@
-import { Box, IconButton } from '@mui/material';
-import HubIcon from '@mui/icons-material/Hub';
+import { Box, IconButton, Tooltip } from '@mui/material';
+import SettingsRoundedIcon from '@mui/icons-material/SettingsRounded';
 import LanguageSelector from '../Language/LanguageSelector';
-import ThemeSelector from '../Theme/ThemeSelector';
 
 type NotAuthenticatedFooterProps = {
   showCoreSetup: boolean;
@@ -15,27 +14,30 @@ export function NotAuthenticatedFooter({
   return (
     <Box
       sx={{
-        alignItems: 'flex-start',
-        bottom: '1%',
+        alignItems: 'center',
         display: 'flex',
-        flexDirection: 'column',
-        left: '3px',
+        gap: 0.35,
+        justifyContent: 'flex-end',
+        opacity: 0.62,
+        pointerEvents: 'auto',
         position: 'absolute',
+        right: '12px',
+        bottom: '10px',
         width: 'auto',
+        zIndex: 2000,
       }}
     >
       {showCoreSetup && (
-        <Box sx={{ alignSelf: 'center' }}>
-          <IconButton onClick={onOpenCoreSetup}>
-            <HubIcon />
-          </IconButton>
+        <Box>
+          <Tooltip title="Core controls">
+            <IconButton onClick={onOpenCoreSetup}>
+              <SettingsRoundedIcon sx={{ fontSize: 18 }} />
+            </IconButton>
+          </Tooltip>
         </Box>
       )}
-      <Box sx={{ alignSelf: 'left' }}>
+      <Box>
         <LanguageSelector />
-      </Box>
-      <Box sx={{ alignSelf: 'center' }}>
-        <ThemeSelector />
       </Box>
     </Box>
   );
